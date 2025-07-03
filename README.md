@@ -1,2 +1,4 @@
 # Praeter case
  
+pandas
+openpyxl?
