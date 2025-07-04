@@ -2,3 +2,5 @@
  
 pandas
 openpyxl?
+numpy
+matplotlib
