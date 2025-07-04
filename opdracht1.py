@@ -6,27 +6,28 @@ import matplotlib.pyplot as plt
 unfiltered_df = pd.read_excel("PraeterBV_Case.xlsx", sheet_name=1, skiprows=14, usecols="A:N")
 unfiltered_df.rename(columns={'CATEGORIE': 'Utiliteitsbouw dienstensector'}, inplace=True)
 #Verkrijg de sectoren
-sectoren_df = pd.read_excel("PraeterBV_Case.xlsx", sheet_name=1, usecols="R")
-sectoren_df = sectoren_df.iloc[0:18]
-sectoren_df.columns = ["Sectoren"]
-sectoren_list = sectoren_df["Sectoren"].dropna().tolist()
+sectorNamen_df = pd.read_excel("PraeterBV_Case.xlsx", sheet_name=1, usecols="R")
+sectorNamen_df = sectorNamen_df.iloc[0:18]
+sectorNamen_df.columns = ["Sectoren"]
+sectorNamen_list = sectorNamen_df["Sectoren"].dropna().tolist()
 #Verkrijg de inputvelden
-inputWaardes = pd.read_excel("PraeterBV_Case.xlsx", sheet_name=0, skiprows=4, usecols="C:D")
-inputWaardes.set_index('Gegevens', inplace=True)
-inputWaardes.columns = ['Waarde']
+inputWaardes_df = pd.read_excel("PraeterBV_Case.xlsx", sheet_name=0, skiprows=4, usecols="C:D")
+inputWaardes_df.set_index('Gegevens', inplace=True)
+inputWaardes_df.columns = ['Waarde']
 
-gasVerbruik = int(inputWaardes.loc['Gas', 'Waarde'])##
-elektriciteitsVerbruik = int(inputWaardes.loc['elektriciteit', 'Waarde'])##
-energetischeWaardeGE = int(inputWaardes.loc['energetische waarde gas-elektra', 'Waarde'])##
-bouwjaarPand = int(inputWaardes.loc['Bouwjaar', 'Waarde'])
-inputCategorie = inputWaardes.loc['Categorie', 'Waarde']
-oppervlaktePand = int(inputWaardes.loc['Oppervlakte', 'Waarde'])
-hoogteEtage = float(inputWaardes.loc['Hoogte (etage)', 'Waarde'])##
+gasVerbruik = int(inputWaardes_df.loc['Gas', 'Waarde'])
+elektriciteitsVerbruik = int(inputWaardes_df.loc['elektriciteit', 'Waarde'])
+energetischeWaardeGE = int(inputWaardes_df.loc['energetische waarde gas-elektra', 'Waarde'])
+bouwjaarPand = int(inputWaardes_df.loc['Bouwjaar', 'Waarde'])
+inputCategorie = inputWaardes_df.loc['Categorie', 'Waarde']
+oppervlaktePand = int(inputWaardes_df.loc['Oppervlakte', 'Waarde'])
+hoogteEtage = float(inputWaardes_df.loc['Hoogte (etage)', 'Waarde'])
+#Sector index op basis van keuze
 gekozenSectorIndex = 0
-if inputCategorie in sectoren_list:
-    gekozenSectorIndex = sectoren_list.index(inputCategorie)
+if inputCategorie in sectorNamen_list:
+    gekozenSectorIndex = sectorNamen_list.index(inputCategorie)
 else:
-    gekozenSectorIndex = len(sectoren_list) - 1
+    gekozenSectorIndex = len(sectorNamen_list) - 1
 
 #Hier wordt de categorie berekend op basis van de oppervlakte
 def BerekenCategorieOppervlakte(oppervlakte):
@@ -44,17 +45,19 @@ def BerekenCategorieOppervlakte(oppervlakte):
 
 categorieOppervlakte = BerekenCategorieOppervlakte(oppervlaktePand)
 
-def FilterDataframe(Sector, Bouwjaar, categorieOppervlakte):    
-    filteredOpDS = unfiltered_df[unfiltered_df['Utiliteitsbouw dienstensector'] == Sector].copy()
+#De DataFrame wordt eerst gefiltered op basis van sector, dan op bouwjaar en als laatst op oppervlakte categorie
+def FilterDataframe(sectorNaam, bouwjaar, categorieOppervlakte):    
+    filteredOpDS = unfiltered_df[unfiltered_df['Utiliteitsbouw dienstensector'] == sectorNaam].copy()
     filteredOpDS.rename(columns={'Onderwerp': 'MIN', 'Unnamed: 2': 'MAX', 'Unnamed: 3': 'CAT'}, inplace=True)
 
-    filteredOpBouwjaar = filteredOpDS[(filteredOpDS['MIN'] <= Bouwjaar) & (filteredOpDS['MAX'] >= Bouwjaar)]
+    filteredOpBouwjaar = filteredOpDS[(filteredOpDS['MIN'] <= bouwjaar) & (filteredOpDS['MAX'] >= bouwjaar)]
 
     resultaatGasElektriciteit = filteredOpBouwjaar[[categorieOppervlakte, f"{categorieOppervlakte}.1"]].astype(float)
     return resultaatGasElektriciteit.values.tolist()
 
-resultaatGasElektriciteit_list = FilterDataframe( sectoren_list[gekozenSectorIndex], bouwjaarPand, categorieOppervlakte)
+resultaatGasElektriciteit_list = FilterDataframe( sectorNamen_list[gekozenSectorIndex], bouwjaarPand, categorieOppervlakte)
 
+#Hier wordt de tabel gegenereerd. Er wordt eerst gekeken of het gaat om de eigen waardes of om de gemiddelde waardes
 def GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, oppervlaktePand, hoogteEtage, gemiddeldeWaardes=None):
      # Genereer 3x3 dataframe met benaming van kolommen en rijen
     genereerdeTabel = pd.DataFrame(np.empty((3,3), dtype=float), columns=["Per m2", "Per m3", "Totaal"], index=["Gas (m3)", "Elektriciteit (kWh)", "Totaal"])
@@ -79,13 +82,14 @@ def GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, opp
 
 huidigVerbruik = GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, oppervlaktePand, hoogteEtage, None)
 gemiddeldVerbruik = GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, oppervlaktePand, hoogteEtage, resultaatGasElektriciteit_list)
+print(f'Totaal kWh (factor): {elektriciteitsVerbruik*energetischeWaardeGE}')
 
+#Plotten
 huidigeWaardes = [float(huidigVerbruik.iloc[2, 0]), float(huidigVerbruik.iloc[2, 1])]
 gemiddeldeWaardes = [float(gemiddeldVerbruik.iloc[2, 0]), float(gemiddeldVerbruik.iloc[2, 1])]
 labels = ["Per m2", "Per m3"]
 x = np.arange(len(labels))
 barBreedte = 0.3
-
 huidigBar = plt.bar(x - barBreedte/2, huidigeWaardes, width=barBreedte, label='Huidig')
 gemiddeldBar = plt.bar(x + barBreedte/2, gemiddeldeWaardes, width=barBreedte, label='Gemiddeld')
 plt.title("Huidig verbruik t.o.v. gemiddeld verbruik (kWh)")
