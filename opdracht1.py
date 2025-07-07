@@ -83,6 +83,14 @@ def GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, opp
 huidigVerbruik = GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, oppervlaktePand, hoogteEtage, None)
 gemiddeldVerbruik = GenereerTabel(gasVerbruik, elektriciteitsVerbruik, energetischeWaardeGE, oppervlaktePand, hoogteEtage, resultaatGasElektriciteit_list)
 print(f'Totaal kWh (factor): {elektriciteitsVerbruik*energetischeWaardeGE}')
+huidigVerbruik.index = ["Gas (m³)", "Elektriciteit (kWh)", "Totaal"]
+gemiddeldVerbruik.index = ["Gas (m³) ", "Elektriciteit (kWh) ", "Totaal "]
+#Lege Rij aanmaken om onderscheid te kunnen maken tussen de tabellen
+legeRij = pd.DataFrame([[""] * len(huidigVerbruik.columns)], columns=huidigVerbruik.columns)
+# Verticaal plakken
+a = pd.concat([huidigVerbruik, legeRij, gemiddeldVerbruik], axis=0, ignore_index=True)
+a.index = ["Gas (m³) ", "Elektriciteit (kWh) ", "Totaal ", " ", "Gas (m³)", "Elektriciteit (kWh)", "Totaal"]
+print(a)
 
 #Plotten
 huidigeWaardes = [float(huidigVerbruik.iloc[2, 0]), float(huidigVerbruik.iloc[2, 1])]
