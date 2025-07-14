@@ -12,6 +12,8 @@ pip install numpy
 pip install numpy-financial
 python -m pip install -U matplotlib
 
+**Graag de meegeleverde excel sheet gebruiken, omdat de originele sheet paar fouten had**
+
 # Opdracht 1
 
 Eerst worden de waardes uit het Excel-sheet opgehaald.
